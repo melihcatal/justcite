@@ -1,6 +1,6 @@
 {
   "name": "JustCite",
-  "description": "Generate citations in APA, MLA, Chicago, Harvard, IEEE, and BibTeX formats with one click. Extract metadata automatically from any webpage.",
+  "description": "Generate citations in APA, MLA, Chicago, Harvard, IEEE, and BibTeX formats with one click and just cite them.",
   "version": "1.0.0",
   "manifest_version": 3,
   "action": {
