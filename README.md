@@ -142,6 +142,17 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
+
+<h2 id="screenshots">🖼️ Screenshots</h2>
+<div class="screenshots">
+  <img src="chrome/images/1.png" alt="JustCite - Popup" width="320" style="margin-right:12px;margin-bottom:12px;">
+  <img src="chrome/images/2.png" alt="JustCite - Settings" width="320" style="margin-right:12px;margin-bottom:12px;">
+  <br>
+  <img src="chrome/images/3.png" alt="JustCite - About" width="320" style="margin-right:12px;margin-bottom:12px;">
+  <img src="chrome/images/4.png" alt="JustCite - Extraction" width="320" style="margin-right:12px;margin-bottom:12px;">
+</div>
+
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
