@@ -37,6 +37,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   const resetSettingsBtn = document.getElementById('reset-settings');
   const tokens = document.querySelectorAll('.token');
   
+  // Zotero elements
+  const zoteroBtn = document.getElementById('zotero-btn');
+  const zoteroApiKeyInput = document.getElementById('zotero-api-key');
+  const zoteroUserIdInput = document.getElementById('zotero-user-id');
+  const zoteroStatus = document.getElementById('zotero-status');
+  const testZoteroBtn = document.getElementById('test-zotero-btn');
+  
+  // Zotero save modal elements
+  const zoteroSaveModal = document.getElementById('zotero-save-modal');
+  const zoteroSaveClose = document.getElementById('zotero-save-close');
+  const zoteroSaveFolder = document.getElementById('zotero-save-folder');
+  const zoteroSaveCancel = document.getElementById('zotero-save-cancel');
+  const zoteroSaveConfirm = document.getElementById('zotero-save-confirm');
+  const zoteroSaveStatus = document.getElementById('zotero-save-status');
+  
   // Form fields
   const fields = {
     title: document.getElementById('title'),
@@ -483,6 +498,442 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
+   * Update Zotero status display
+   */
+  function updateZoteroStatus(message, type = 'loading') {
+    if (!zoteroStatus) return;
+    
+    zoteroStatus.textContent = message;
+    zoteroStatus.className = 'zotero-status show ' + type;
+    
+    if (type !== 'loading') {
+      setTimeout(() => {
+        zoteroStatus.classList.remove('show');
+      }, 3000);
+    }
+  }
+
+  /**
+   * Fetch Zotero collections/folders and populate the save modal dropdown
+   */
+  async function fetchZoteroCollections(apiKey, userId) {
+    if (!zoteroSaveFolder) return [];
+    
+    try {
+      const response = await fetch(
+        `https://api.zotero.org/users/${userId}/collections`,
+        {
+          method: 'GET',
+          headers: {
+            'Zotero-API-Key': apiKey,
+            'Zotero-API-Version': '3'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        console.error('Failed to fetch Zotero collections:', response.status);
+        return [];
+      }
+
+      const collections = await response.json();
+      
+      // Clear existing options except the default
+      zoteroSaveFolder.innerHTML = '<option value="">My Library (root)</option>';
+      
+      // Function to get indented name based on nesting level
+      function getIndentedCollections(parentKey = null, level = 0) {
+        const result = [];
+        collections.forEach(col => {
+          const colParent = col.data.parentCollection || null;
+          if (colParent === parentKey) {
+            const indent = '  '.repeat(level);
+            result.push({
+              key: col.key,
+              name: indent + (level > 0 ? '└ ' : '') + col.data.name
+            });
+            // Get children
+            result.push(...getIndentedCollections(col.key, level + 1));
+          }
+        });
+        return result;
+      }
+      
+      const sortedCollections = getIndentedCollections(false, 0);
+      
+      // Add collections to select
+      sortedCollections.forEach(col => {
+        const option = document.createElement('option');
+        option.value = col.key;
+        option.textContent = col.name;
+        zoteroSaveFolder.appendChild(option);
+      });
+      
+      // Restore last used collection if any
+      try {
+        const stored = await chrome.storage.local.get(['zoteroLastCollection']);
+        if (stored.zoteroLastCollection) {
+          zoteroSaveFolder.value = stored.zoteroLastCollection;
+        }
+      } catch (e) {
+        console.error('Error restoring last Zotero collection:', e);
+      }
+      
+      return collections;
+    } catch (error) {
+      console.error('Error fetching Zotero collections:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Update Zotero save modal status
+   */
+  function updateZoteroSaveStatus(message, type = 'loading') {
+    if (!zoteroSaveStatus) return;
+    
+    if (!message) {
+      zoteroSaveStatus.className = 'zotero-save-status';
+      zoteroSaveStatus.textContent = '';
+      return;
+    }
+    
+    zoteroSaveStatus.textContent = message;
+    zoteroSaveStatus.className = 'zotero-save-status show ' + type;
+  }
+
+  /**
+   * Convert metadata to Zotero item format
+   */
+  function metadataToZoteroItem(metadata) {
+    // Determine item type based on source type
+    let itemType = 'webpage';
+    const sourceType = sourceTypeSelect.value;
+    
+    switch (sourceType) {
+      case 'article':
+      case 'journal':
+        itemType = metadata.journal ? 'journalArticle' : 'conferencePaper';
+        break;
+      case 'book':
+        itemType = 'book';
+        break;
+      case 'news':
+        itemType = 'newspaperArticle';
+        break;
+      default:
+        itemType = 'webpage';
+    }
+
+    // Parse authors into Zotero format
+    const creators = [];
+    if (metadata.author) {
+      const authors = metadata.author.split(/[;]/).map(a => a.trim()).filter(a => a);
+      authors.forEach(author => {
+        let firstName = '';
+        let lastName = '';
+        
+        if (author.includes(',')) {
+          // Format: "Last, First"
+          const parts = author.split(',').map(p => p.trim());
+          lastName = parts[0];
+          firstName = parts[1] || '';
+        } else {
+          // Format: "First Last"
+          const parts = author.split(' ');
+          lastName = parts.pop() || '';
+          firstName = parts.join(' ');
+        }
+        
+        creators.push({
+          creatorType: 'author',
+          firstName: firstName,
+          lastName: lastName
+        });
+      });
+    }
+
+    // Build the Zotero item
+    const item = {
+      itemType: itemType,
+      title: metadata.title || '',
+      creators: creators,
+      date: metadata.date || '',
+      url: metadata.url || '',
+      accessDate: new Date().toISOString().split('T')[0],
+      tags: [],
+      relations: {}
+    };
+
+    // Add type-specific fields
+    if (metadata.doi) item.DOI = metadata.doi;
+    if (metadata.isbn) item.ISBN = metadata.isbn;
+    if (metadata.publisher) item.publisher = metadata.publisher;
+    
+    if (itemType === 'journalArticle') {
+      if (metadata.journal) item.publicationTitle = metadata.journal;
+      if (metadata.volume) item.volume = metadata.volume;
+      if (metadata.issue) item.issue = metadata.issue;
+      if (metadata.pages) item.pages = metadata.pages;
+    } else if (itemType === 'conferencePaper') {
+      if (metadata.publisher) item.conferenceName = metadata.publisher;
+      if (metadata.pages) item.pages = metadata.pages;
+    } else if (itemType === 'webpage') {
+      if (metadata.publisher) item.websiteTitle = metadata.publisher;
+    }
+
+    return item;
+  }
+
+  /**
+   * Show Zotero save modal with folder selection
+   */
+  async function showZoteroSaveModal() {
+    const metadata = getMetadata();
+    
+    if (!metadata.title) {
+      showToast('No citation to save', true);
+      return;
+    }
+
+    // Get Zotero credentials from storage
+    let zoteroApiKey, zoteroUserId;
+    try {
+      const stored = await chrome.storage.local.get(['zoteroApiKey', 'zoteroUserId']);
+      zoteroApiKey = stored.zoteroApiKey;
+      zoteroUserId = stored.zoteroUserId;
+    } catch (e) {
+      console.error('Error getting Zotero credentials:', e);
+    }
+
+    if (!zoteroApiKey || !zoteroUserId) {
+      showToast('Please configure Zotero in Settings', true);
+      showModal(settingsModal);
+      return;
+    }
+
+    // Show the modal
+    showModal(zoteroSaveModal);
+    
+    // Reset status
+    updateZoteroSaveStatus('');
+    
+    // Fetch and populate collections
+    updateZoteroSaveStatus('Loading collections...', 'loading');
+    await fetchZoteroCollections(zoteroApiKey, zoteroUserId);
+    updateZoteroSaveStatus('');
+  }
+
+  /**
+   * Confirm saving to Zotero with selected collection
+   */
+  async function confirmZoteroSave() {
+    const metadata = getMetadata();
+    
+    // Get Zotero credentials from storage
+    let zoteroApiKey, zoteroUserId;
+    try {
+      const stored = await chrome.storage.local.get(['zoteroApiKey', 'zoteroUserId']);
+      zoteroApiKey = stored.zoteroApiKey;
+      zoteroUserId = stored.zoteroUserId;
+    } catch (e) {
+      console.error('Error getting Zotero credentials:', e);
+      updateZoteroSaveStatus('Failed to get credentials', 'error');
+      return;
+    }
+
+    // Get selected collection
+    const collectionKey = zoteroSaveFolder ? zoteroSaveFolder.value : '';
+
+    // Convert metadata to Zotero format
+    const zoteroItem = metadataToZoteroItem(metadata);
+    
+    // Add collection if specified
+    if (collectionKey) {
+      zoteroItem.collections = [collectionKey];
+    }
+
+    // Log the item being sent for debugging
+    console.log('Sending to Zotero:', JSON.stringify([zoteroItem], null, 2));
+
+    try {
+      // Disable confirm button during save
+      if (zoteroSaveConfirm) zoteroSaveConfirm.disabled = true;
+      updateZoteroSaveStatus('Saving...', 'loading');
+
+      const response = await fetch(
+        `https://api.zotero.org/users/${zoteroUserId}/items`,
+        {
+          method: 'POST',
+          headers: {
+            'Zotero-API-Key': zoteroApiKey,
+            'Content-Type': 'application/json',
+            'Zotero-API-Version': '3'
+          },
+          body: JSON.stringify([zoteroItem])
+        }
+      );
+
+      const responseText = await response.text();
+      console.log('Zotero API response:', response.status, responseText);
+
+      if (response.ok) {
+        // Parse the response to check for success
+        try {
+          const result = JSON.parse(responseText);
+          console.log('Zotero parsed result:', result);
+          
+          // Check if there are successful items
+          if (result.successful && Object.keys(result.successful).length > 0) {
+            const savedItemKey = Object.keys(result.successful)[0];
+            const savedItem = result.successful[savedItemKey];
+            console.log('Successfully saved item with key:', savedItem?.key || savedItemKey);
+            
+            // Save last used collection for convenience
+            try {
+              await chrome.storage.local.set({ zoteroLastCollection: collectionKey });
+            } catch (e) {}
+            
+            hideModal(zoteroSaveModal);
+            showToast('Saved to Zotero! Sync your Zotero client to see it.');
+          } else if (result.failed && Object.keys(result.failed).length > 0) {
+            // There were failures
+            const failedKey = Object.keys(result.failed)[0];
+            const failedItem = result.failed[failedKey];
+            const errorMsg = failedItem?.message || failedItem?.code || 'Unknown error';
+            console.error('Zotero item failed:', failedItem);
+            updateZoteroSaveStatus(`Failed: ${errorMsg}`, 'error');
+          } else if (result.unchanged && Object.keys(result.unchanged).length > 0) {
+            hideModal(zoteroSaveModal);
+            showToast('Item already exists in Zotero');
+          } else {
+            // Check if it's an array response (older format)
+            if (Array.isArray(result) && result.length > 0) {
+              console.log('Saved item (array format):', result[0]);
+              hideModal(zoteroSaveModal);
+              showToast('Saved to Zotero! Sync your Zotero client to see it.');
+            } else {
+              // Unknown response format, assume success
+              console.warn('Unknown Zotero response format:', result);
+              hideModal(zoteroSaveModal);
+              showToast('Saved to Zotero!');
+            }
+          }
+        } catch (parseError) {
+          console.error('Error parsing Zotero response:', parseError);
+          // If we can't parse, assume success since response was OK
+          hideModal(zoteroSaveModal);
+          showToast('Saved to Zotero!');
+        }
+      } else if (response.status === 403) {
+        updateZoteroSaveStatus('Invalid API key or no write permission', 'error');
+      } else if (response.status === 404) {
+        updateZoteroSaveStatus('Invalid Zotero User ID', 'error');
+      } else if (response.status === 400) {
+        console.error('Zotero 400 error - invalid item format:', responseText);
+        updateZoteroSaveStatus('Invalid item format', 'error');
+      } else {
+        console.error('Zotero API error:', response.status, responseText);
+        updateZoteroSaveStatus(`Failed to save (${response.status})`, 'error');
+      }
+    } catch (error) {
+      console.error('Error saving to Zotero:', error);
+      updateZoteroSaveStatus('Failed to connect to Zotero', 'error');
+    } finally {
+      if (zoteroSaveConfirm) zoteroSaveConfirm.disabled = false;
+    }
+  }
+
+  /**
+   * Verify Zotero credentials (checks both read and write access)
+   */
+  async function verifyZoteroCredentials(apiKey, userId) {
+    if (!apiKey || !userId) {
+      return { valid: false, message: 'Please enter both API key and User ID' };
+    }
+
+    try {
+      updateZoteroStatus('Verifying...', 'loading');
+      
+      // First check: verify the key works by fetching key permissions
+      const keyResponse = await fetch(
+        `https://api.zotero.org/keys/${apiKey}`,
+        {
+          method: 'GET',
+          headers: {
+            'Zotero-API-Version': '3'
+          }
+        }
+      );
+
+      console.log('Zotero key check response:', keyResponse.status);
+
+      if (!keyResponse.ok) {
+        if (keyResponse.status === 404) {
+          updateZoteroStatus('✗ Invalid API key', 'error');
+          return { valid: false, message: 'Invalid API key' };
+        }
+        updateZoteroStatus('✗ Failed to verify API key', 'error');
+        return { valid: false, message: 'Failed to verify API key' };
+      }
+
+      const keyInfo = await keyResponse.json();
+      console.log('Zotero key info:', keyInfo);
+
+      // Check if the key has library write access
+      const hasWriteAccess = keyInfo.access?.user?.library === true || 
+                              keyInfo.access?.user?.write === true;
+      
+      // Check if the userID matches
+      if (keyInfo.userID && keyInfo.userID.toString() !== userId.toString()) {
+        updateZoteroStatus('✗ User ID does not match API key', 'error');
+        return { valid: false, message: 'User ID does not match this API key' };
+      }
+
+      // Second check: verify we can access the user's library
+      const response = await fetch(
+        `https://api.zotero.org/users/${userId}/items?limit=1`,
+        {
+          method: 'GET',
+          headers: {
+            'Zotero-API-Key': apiKey,
+            'Zotero-API-Version': '3'
+          }
+        }
+      );
+
+      console.log('Zotero library check response:', response.status);
+
+      if (response.ok) {
+        if (hasWriteAccess) {
+          updateZoteroStatus('✓ Connected to Zotero (read/write)', 'success');
+        } else {
+          updateZoteroStatus('⚠ Connected (read-only, no write access)', 'error');
+          return { valid: false, message: 'API key does not have write permission' };
+        }
+        // Fetch collections on successful connection
+        await fetchZoteroCollections(apiKey, userId);
+        return { valid: true, message: 'Connected to Zotero' };
+      } else if (response.status === 403) {
+        updateZoteroStatus('✗ No access to this library', 'error');
+        return { valid: false, message: 'No access to this library' };
+      } else if (response.status === 404) {
+        updateZoteroStatus('✗ Invalid User ID', 'error');
+        return { valid: false, message: 'Invalid User ID' };
+      } else {
+        const errorText = await response.text().catch(() => '');
+        console.error('Zotero API error:', response.status, errorText);
+        updateZoteroStatus(`✗ Connection failed (${response.status})`, 'error');
+        return { valid: false, message: `Connection failed: ${response.status}` };
+      }
+    } catch (error) {
+      console.error('Zotero network error:', error);
+      updateZoteroStatus('✗ Network error', 'error');
+      return { valid: false, message: 'Network error' };
+    }
+  }
+
+  /**
    * Extract DOI from URL or page content
    */
   function extractDoiFromUrl(url) {
@@ -701,7 +1152,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         'outputFormat',
         'includeAccessDate',
         'keyFormat',
-        'detailsExpanded'
+        'detailsExpanded',
+        'zoteroApiKey',
+        'zoteroUserId'
       ]);
       
       if (result.citationStyle) citationStyleSelect.value = result.citationStyle;
@@ -715,6 +1168,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         keyFormatInput.value = DEFAULT_KEY_FORMAT;
       }
       if (result.detailsExpanded) toggleDetails(true);
+      
+      // Load Zotero credentials
+      if (result.zoteroApiKey && zoteroApiKeyInput) {
+        zoteroApiKeyInput.value = result.zoteroApiKey;
+      }
+      if (result.zoteroUserId && zoteroUserIdInput) {
+        zoteroUserIdInput.value = result.zoteroUserId;
+      }
       
       updateFieldVisibility();
       updateKeyPreview();
@@ -767,7 +1228,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updatePreview();
   });
 
-  outputFormatSelect.addEventListener('change', savePreferences);
+  // outputFormatSelect.addEventListener('change', savePreferences);
 
   includeAccessDate.addEventListener('change', () => {
     savePreferences();
@@ -807,6 +1268,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     await fetchMetadata();
   });
 
+  // Zotero button
+  if (zoteroBtn) {
+    zoteroBtn.addEventListener('click', showZoteroSaveModal);
+  }
+
   // About modal
   aboutBtn.addEventListener('click', () => {
     // Update version from manifest when opening About modal
@@ -832,6 +1298,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.target === settingsModal) hideModal(settingsModal);
   });
 
+  // Zotero save modal
+  if (zoteroSaveClose) {
+    zoteroSaveClose.addEventListener('click', () => hideModal(zoteroSaveModal));
+  }
+  if (zoteroSaveCancel) {
+    zoteroSaveCancel.addEventListener('click', () => hideModal(zoteroSaveModal));
+  }
+  if (zoteroSaveConfirm) {
+    zoteroSaveConfirm.addEventListener('click', confirmZoteroSave);
+  }
+  if (zoteroSaveModal) {
+    zoteroSaveModal.addEventListener('click', (e) => {
+      if (e.target === zoteroSaveModal) hideModal(zoteroSaveModal);
+    });
+  }
+
   // Key format tokens
   tokens.forEach(token => {
     token.addEventListener('click', () => {
@@ -851,9 +1333,47 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   keyFormatInput.addEventListener('input', updateKeyPreview);
 
-  saveSettingsBtn.addEventListener('click', () => {
+  // Test Zotero connection button
+  if (testZoteroBtn) {
+    testZoteroBtn.addEventListener('click', async () => {
+      const apiKey = zoteroApiKeyInput ? zoteroApiKeyInput.value.trim() : '';
+      const userId = zoteroUserIdInput ? zoteroUserIdInput.value.trim() : '';
+      await verifyZoteroCredentials(apiKey, userId);
+    });
+  }
+
+  saveSettingsBtn.addEventListener('click', async () => {
     currentKeyFormat = keyFormatInput.value || DEFAULT_KEY_FORMAT;
-    savePreferences();
+    
+    // Save Zotero credentials if provided
+    const zoteroApiKey = zoteroApiKeyInput ? zoteroApiKeyInput.value.trim() : '';
+    const zoteroUserId = zoteroUserIdInput ? zoteroUserIdInput.value.trim() : '';
+    
+    // Verify Zotero credentials if both are provided
+    if (zoteroApiKey && zoteroUserId) {
+      const verification = await verifyZoteroCredentials(zoteroApiKey, zoteroUserId);
+      if (!verification.valid) {
+        // Don't close modal, let user see the error
+        return;
+      }
+    }
+    
+    // Save all settings including Zotero credentials
+    try {
+      await chrome.storage.local.set({
+        citationStyle: citationStyleSelect.value,
+        sourceType: sourceTypeSelect.value,
+        outputFormat: outputFormatSelect.value,
+        includeAccessDate: includeAccessDate.checked,
+        keyFormat: currentKeyFormat,
+        detailsExpanded: detailsSection.classList.contains('expanded'),
+        zoteroApiKey: zoteroApiKey,
+        zoteroUserId: zoteroUserId
+      });
+    } catch (error) {
+      console.error('Error saving settings:', error);
+    }
+    
     updatePreview();
     hideModal(settingsModal);
     showToast('Settings saved!');
@@ -863,6 +1383,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     keyFormatInput.value = DEFAULT_KEY_FORMAT;
     currentKeyFormat = DEFAULT_KEY_FORMAT;
     updateKeyPreview();
+    // Clear Zotero status when resetting
+    if (zoteroStatus) {
+      zoteroStatus.textContent = '';
+      zoteroStatus.className = 'zotero-status';
+    }
   });
 
   // Initialize

@@ -189,13 +189,13 @@
                             <span class="material-icons">code</span>
                             <span>Citation</span>
                         </div>
-                        <div class="output-format">
+                        <!-- <div class="output-format">
                             <select id="output-format" data-tooltip="Output format for copying">
                                 <option value="plain">Plain Text</option>
                                 <option value="markdown">Markdown</option>
                                 <option value="html">HTML</option>
                             </select>
-                        </div>
+                        </div> -->
                     </div>
                     <div class="preview-box" id="citation-preview">
                         <pre class="citation-code"><code id="citation-code"></code></pre>
@@ -210,6 +210,10 @@
             <button class="btn btn-secondary" id="refresh-btn" data-tooltip="Re-extract metadata from the current page">
                 <span class="material-icons">refresh</span>
                 Refresh
+            </button>
+            <button class="btn btn-zotero" id="zotero-btn" data-tooltip="Save to Zotero library">
+                <span class="zotero-icon">Z</span>
+                Zotero
             </button>
             <button class="btn btn-primary" id="copy-btn" data-tooltip="Copy citation to clipboard">
                 <span class="material-icons">content_copy</span>
@@ -226,6 +230,40 @@
         <div class="toast" id="toast">
             <span class="material-icons">check_circle</span>
             <span class="toast-message">Citation copied to clipboard!</span>
+        </div>
+
+        <!-- Zotero Save Modal -->
+        <div class="modal-overlay" id="zotero-save-modal">
+            <div class="modal modal-small">
+                <div class="modal-header">
+                    <div class="modal-title">
+                        <span class="zotero-icon modal-icon">Z</span>
+                        <h2>Save to Zotero</h2>
+                    </div>
+                    <button class="icon-btn modal-close" id="zotero-save-close">
+                        <span class="material-icons">close</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="zotero-save-folder">Choose Collection</label>
+                        <div class="select-wrapper">
+                            <select id="zotero-save-folder">
+                                <option value="">My Library (root)</option>
+                            </select>
+                            <span class="material-icons">expand_more</span>
+                        </div>
+                    </div>
+                    <div class="zotero-save-status" id="zotero-save-status"></div>
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" id="zotero-save-cancel">Cancel</button>
+                        <button class="btn btn-primary" id="zotero-save-confirm">
+                            <span class="material-icons">save</span>
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- About Modal -->
@@ -307,6 +345,31 @@
                             <code id="key-preview-text">smith_mac_2024</code>
                         </div>
                     </div>
+
+                    <div class="settings-section">
+                        <h3>Zotero Integration</h3>
+                        <p class="settings-description">
+                            Connect to your Zotero library to save citations directly.
+                            <a href="https://www.zotero.org/settings/keys/new" target="_blank" class="settings-link">Get
+                                your API key</a>
+                        </p>
+                        <div class="form-group">
+                            <label for="zotero-api-key">API Key</label>
+                            <input type="password" id="zotero-api-key" placeholder="Enter your Zotero API key...">
+                            <span class="field-hint">Must have "Allow library access" permission</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="zotero-user-id">User ID <a href="https://www.zotero.org/settings/keys"
+                                    target="_blank" class="settings-link">(find it here)</a></label>
+                            <input type="text" id="zotero-user-id" placeholder="Numeric ID, e.g. 1234567">
+                            <span class="field-hint">Found in "Your userID for use in API calls" on the keys page</span>
+                        </div>
+                        <div class="zotero-actions">
+                            <button class="btn btn-secondary btn-small" id="test-zotero-btn">Test Connection</button>
+                        </div>
+                        <div class="zotero-status" id="zotero-status"></div>
+                    </div>
+
                     <div class="settings-actions">
                         <button class="btn btn-secondary" id="reset-settings">Reset Default</button>
                         <button class="btn btn-primary" id="save-settings">Save</button>

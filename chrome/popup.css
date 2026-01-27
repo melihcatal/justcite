@@ -345,7 +345,7 @@ html::after {
     align-items: center;
     gap: 8px;
     font-size: 12px;
-    color: var(--text-secondary);
+    color: var (--text-secondary);
     cursor: pointer;
 }
 
@@ -589,7 +589,9 @@ html::after {
     border-radius: var(--radius-lg);
     width: 90%;
     max-width: 400px;
-    max-height: 90%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
     box-shadow: var(--shadow-lg);
     transform: scale(0.95);
@@ -606,6 +608,7 @@ html::after {
     justify-content: space-between;
     padding: 14px 16px;
     border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
 }
 
 .modal-title {
@@ -627,6 +630,8 @@ html::after {
 .modal-body {
     padding: 16px;
     overflow-y: auto;
+    flex: 1;
+    min-height: 0;
 }
 
 /* About Modal Styles */
@@ -819,6 +824,14 @@ html::after {
     cursor: help;
 }
 
+/* Buttons and clickable elements should keep pointer cursor even with tooltips */
+button[data-tooltip],
+.btn[data-tooltip],
+.icon-btn[data-tooltip],
+a[data-tooltip] {
+    cursor: pointer;
+}
+
 [data-tooltip]::before,
 [data-tooltip]::after {
     position: absolute;
@@ -881,7 +894,7 @@ html::after {
     gap: 8px;
     justify-content: center;
     font-size: 11px;
-    color: var(--text-muted);
+    color: var (--text-muted);
     padding: 8px 0 6px 0;
     border-top: 1px solid var(--border);
 }
@@ -1015,4 +1028,143 @@ html::after {
 
 .version-info .doi-link:hover {
     text-decoration: underline;
+}
+
+/* Zotero Button */
+.btn-zotero {
+    background: #cc2936;
+    color: white;
+    border: none;
+}
+
+.btn-zotero:hover {
+    background: #a82330;
+}
+
+.btn-zotero:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.zotero-icon {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+/* Zotero Settings */
+.settings-section+.settings-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+}
+
+.settings-link {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.settings-link:hover {
+    text-decoration: underline;
+}
+
+.zotero-status {
+    font-size: 11px;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    margin-top: 8px;
+    display: none;
+}
+
+.zotero-status.show {
+    display: block;
+}
+
+.zotero-status.success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.zotero-status.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--error);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.zotero-status.loading {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--primary);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.field-hint {
+    display: block;
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.zotero-actions {
+    margin-top: 12px;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 11px;
+}
+
+/* Zotero Save Modal */
+.modal-small {
+    max-width: 320px;
+}
+
+.modal-icon {
+    font-size: 20px;
+    font-weight: 700;
+    color: #cc2936;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    justify-content: flex-end;
+}
+
+.modal-actions .btn {
+    flex: 0;
+    min-width: 80px;
+}
+
+.zotero-save-status {
+    font-size: 12px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    margin-top: 8px;
+    display: none;
+}
+
+.zotero-save-status.show {
+    display: block;
+}
+
+.zotero-save-status.loading {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--primary);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.zotero-save-status.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--error);
+    border: 1px solid rgba(239, 68, 68, 0.3);
 }
