@@ -1,7 +1,7 @@
 {
   "name": "JustCite",
   "description": "Generate citations in APA, MLA, Chicago, Harvard, IEEE, and BibTeX formats with one click and just cite them.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "manifest_version": 3,
   "action": {
     "default_popup": "popup.html",
