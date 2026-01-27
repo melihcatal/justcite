@@ -1,4 +1,4 @@
-# 📚 JustCite
+<h1><img src="chrome/icons/icon128.png" alt="JustCite" width="36" style="vertical-align:middle;margin-right:8px;">JustCite</h1>
 
 A modern, minimalist browser extension for generating academic citations. Extract metadata from any webpage and create properly formatted citations in multiple styles.
 
