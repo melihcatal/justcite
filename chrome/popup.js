@@ -18,6 +18,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const detailsSection = document.querySelector('.collapsible-section');
   const includeAccessDate = document.getElementById('include-access-date');
   
+  // Peer-reviewed version switcher elements
+  const versionSwitcher = document.getElementById('version-switcher');
+  const versionArxivBtn = document.getElementById('version-arxiv-btn');
+  const versionPublishedBtn = document.getElementById('version-published-btn');
+  const versionInfo = document.getElementById('version-info');
+  
   // Modal elements
   const aboutBtn = document.getElementById('about-btn');
   const aboutModal = document.getElementById('about-modal');
@@ -100,6 +106,248 @@ document.addEventListener('DOMContentLoaded', async () => {
       includeAccessDate: includeAccessDate.checked,
       keyFormat: currentKeyFormat
     };
+  }
+
+  // Store peer-reviewed version data and original arXiv data
+  let peerReviewedVersion = null;
+  let arxivVersion = null;
+  let currentVersion = 'arxiv'; // 'arxiv' or 'published'
+
+  /**
+   * Extract arXiv ID from URL
+   */
+  function extractArxivId(url) {
+    if (!url) return null;
+    
+    // Match patterns like:
+    // https://arxiv.org/abs/2301.00001
+    // https://arxiv.org/pdf/2301.00001.pdf
+    // https://arxiv.org/abs/hep-th/9901001
+    const patterns = [
+      /arxiv\.org\/(?:abs|pdf)\/(\d{4}\.\d{4,5})/i,
+      /arxiv\.org\/(?:abs|pdf)\/([\w-]+\/\d{7})/i,
+      /arXiv:(\d{4}\.\d{4,5})/i,
+      /arXiv:([\w-]+\/\d{7})/i
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) {
+        return match[1];
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Check for peer-reviewed version using Semantic Scholar API
+   */
+  async function checkForPeerReviewedVersion(url) {
+    const arxivId = extractArxivId(url);
+    if (!arxivId) {
+      hideVersionSwitcher();
+      return null;
+    }
+
+    // Store the current arXiv version before checking
+    arxivVersion = {
+      title: fields.title.value,
+      author: fields.author.value,
+      date: fields.date.value,
+      url: fields.url.value,
+      publisher: fields.publisher.value,
+      doi: fields.doi.value,
+      journal: fields.journal.value,
+      volume: fields.volume.value,
+      issue: fields.issue.value,
+      pages: fields.pages.value,
+      arxivId: arxivId
+    };
+
+    try {
+      // Query Semantic Scholar API with arXiv ID
+      const response = await fetch(
+        `https://api.semanticscholar.org/graph/v1/paper/arXiv:${arxivId}?fields=title,authors,year,venue,publicationVenue,externalIds,journal,publicationDate`
+      );
+
+      if (!response.ok) {
+        console.log('Semantic Scholar API returned non-OK status:', response.status);
+        return null;
+      }
+
+      const data = await response.json();
+
+      // Helper function to check if a venue name indicates it's still just arXiv/preprint
+      const isArxivOrPreprint = (name) => {
+        if (!name) return true;
+        const lower = name.toLowerCase();
+        return lower.includes('arxiv') || 
+               lower.includes('preprint') || 
+               lower.includes('corr') ||  // DBLP uses "corr" for arXiv
+               lower === '';
+      };
+
+      // Check if paper has been published in a real venue (not arXiv)
+      const hasVenue = data.venue && !isArxivOrPreprint(data.venue);
+      
+      const hasPublicationVenue = data.publicationVenue && 
+                                  data.publicationVenue.name &&
+                                  !isArxivOrPreprint(data.publicationVenue.name);
+      
+      const hasJournal = data.journal && data.journal.name &&
+                         !isArxivOrPreprint(data.journal.name);
+
+      // Only consider DOI if it's not an arXiv DOI
+      const hasDoi = data.externalIds && 
+                     data.externalIds.DOI && 
+                     !data.externalIds.DOI.toLowerCase().includes('arxiv');
+
+      if (hasVenue || hasPublicationVenue || hasJournal || hasDoi) {
+        // Determine the publisher from the venue
+        const venueName = data.publicationVenue?.name || data.venue || '';
+        const isConference = data.publicationVenue?.type === 'conference';
+        
+        // For journals, use journal.name; for conferences, use venue name
+        const journalName = (!isConference && data.journal?.name && !isArxivOrPreprint(data.journal.name)) 
+          ? data.journal.name 
+          : '';
+        
+        peerReviewedVersion = {
+          title: data.title,
+          author: data.authors ? data.authors.map(a => a.name).join('; ') : '',
+          year: data.year ? data.year.toString() : '',
+          date: data.publicationDate || (data.year ? data.year.toString() : ''),
+          venue: venueName,
+          publisher: venueName, // Use venue as publisher
+          journal: journalName,
+          volume: data.journal?.volume || '',
+          issue: '',
+          pages: data.journal?.pages || '',
+          doi: data.externalIds?.DOI || '',
+          url: data.externalIds?.DOI ? `https://doi.org/${data.externalIds.DOI}` : '',
+          arxivId: arxivId,
+          isConference: isConference
+        };
+
+        showVersionSwitcher();
+        return peerReviewedVersion;
+      }
+    } catch (error) {
+      console.error('Error checking for peer-reviewed version:', error);
+    }
+
+    hideVersionSwitcher();
+    return null;
+  }
+
+  /**
+   * Show the version switcher
+   */
+  function showVersionSwitcher() {
+    if (!versionSwitcher) return;
+
+    // Reset to arXiv version being active
+    currentVersion = 'arxiv';
+    updateVersionButtons();
+    updateVersionInfo();
+
+    versionSwitcher.classList.add('show');
+  }
+
+  /**
+   * Hide the version switcher
+   */
+  function hideVersionSwitcher() {
+    if (versionSwitcher) {
+      versionSwitcher.classList.remove('show');
+    }
+    peerReviewedVersion = null;
+    arxivVersion = null;
+    currentVersion = 'arxiv';
+  }
+
+  /**
+   * Update version toggle button states
+   */
+  function updateVersionButtons() {
+    if (versionArxivBtn) {
+      versionArxivBtn.classList.toggle('active', currentVersion === 'arxiv');
+    }
+    if (versionPublishedBtn) {
+      versionPublishedBtn.classList.toggle('active', currentVersion === 'published');
+    }
+  }
+
+  /**
+   * Update version info display
+   */
+  function updateVersionInfo() {
+    if (!versionInfo) return;
+
+    if (currentVersion === 'arxiv') {
+      const arxivId = arxivVersion?.arxivId || '';
+      versionInfo.innerHTML = `<strong>arXiv:</strong> ${arxivId} (Preprint)`;
+    } else if (peerReviewedVersion) {
+      let info = '';
+      if (peerReviewedVersion.venue) {
+        info = `<strong>${peerReviewedVersion.venue}</strong>`;
+        if (peerReviewedVersion.year) {
+          info += ` (${peerReviewedVersion.year})`;
+        }
+      }
+      if (peerReviewedVersion.doi) {
+        const doiUrl = `https://doi.org/${peerReviewedVersion.doi}`;
+        info += info ? ` • ` : '';
+        info += `<a href="${doiUrl}" target="_blank" class="doi-link">${peerReviewedVersion.doi}</a>`;
+      }
+      versionInfo.innerHTML = info;
+    }
+  }
+
+  /**
+   * Switch to a specific version (arxiv or published)
+   */
+  function switchToVersion(version) {
+    if (version === currentVersion) return;
+    
+    currentVersion = version;
+    updateVersionButtons();
+    updateVersionInfo();
+
+    if (version === 'arxiv' && arxivVersion) {
+      // Apply arXiv version
+      fields.title.value = arxivVersion.title || '';
+      fields.author.value = arxivVersion.author || '';
+      fields.date.value = arxivVersion.date || '';
+      fields.url.value = arxivVersion.url || '';
+      fields.publisher.value = arxivVersion.publisher || '';
+      fields.doi.value = arxivVersion.doi || '';
+      fields.journal.value = arxivVersion.journal || '';
+      fields.volume.value = arxivVersion.volume || '';
+      fields.issue.value = arxivVersion.issue || '';
+      fields.pages.value = arxivVersion.pages || '';
+      
+      // Reset source type for preprint
+      sourceTypeSelect.value = 'article';
+    } else if (version === 'published' && peerReviewedVersion) {
+      // Apply peer-reviewed version
+      fields.title.value = peerReviewedVersion.title || '';
+      fields.author.value = peerReviewedVersion.author || '';
+      fields.date.value = peerReviewedVersion.date || '';
+      fields.url.value = peerReviewedVersion.url || '';
+      fields.publisher.value = peerReviewedVersion.publisher || '';
+      fields.doi.value = peerReviewedVersion.doi || '';
+      fields.journal.value = peerReviewedVersion.journal || '';
+      fields.volume.value = peerReviewedVersion.volume || '';
+      fields.issue.value = peerReviewedVersion.issue || '';
+      fields.pages.value = peerReviewedVersion.pages || '';
+      
+      // Set source type based on publication type
+      sourceTypeSelect.value = peerReviewedVersion.isConference ? 'article' : 'journal';
+    }
+
+    updateFieldVisibility();
+    updatePreview();
   }
 
   /**
@@ -235,6 +483,118 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
+   * Extract DOI from URL or page content
+   */
+  function extractDoiFromUrl(url) {
+    if (!url) return null;
+    const doiRegex = /10\.\d{4,}(?:\.\d+)*\/[^\s"<>]+/;
+    const match = url.match(doiRegex);
+    return match ? match[0].replace(/[.,;]$/, '') : null; // Remove trailing punctuation
+  }
+
+  /**
+   * Check if metadata is incomplete and needs enhancement
+   */
+  function isMetadataIncomplete(metadata) {
+    // Consider incomplete if missing author OR (missing title AND has DOI)
+    const missingAuthor = !metadata.author || metadata.author.trim() === '';
+    const missingTitle = !metadata.title || metadata.title.trim() === '';
+    const missingDate = !metadata.date || metadata.date.trim() === '';
+    
+    return missingAuthor || (missingTitle && metadata.doi) || (missingAuthor && missingDate);
+  }
+
+  /**
+   * Enhance metadata using Semantic Scholar API
+   * Can look up by DOI or arXiv ID
+   */
+  async function enhanceMetadataWithSemanticScholar(metadata) {
+    let paperId = null;
+    
+    // Try to find paper by DOI first
+    if (metadata.doi) {
+      paperId = `DOI:${metadata.doi}`;
+    } else {
+      // Try to extract DOI from URL
+      const doiFromUrl = extractDoiFromUrl(metadata.url);
+      if (doiFromUrl) {
+        paperId = `DOI:${doiFromUrl}`;
+        metadata.doi = doiFromUrl; // Also set the DOI field
+      }
+    }
+    
+    // If no DOI, try arXiv ID
+    if (!paperId) {
+      const arxivId = extractArxivId(metadata.url);
+      if (arxivId) {
+        paperId = `arXiv:${arxivId}`;
+      }
+    }
+    
+    if (!paperId) {
+      return metadata; // Can't look up without identifier
+    }
+
+    try {
+      const response = await fetch(
+        `https://api.semanticscholar.org/graph/v1/paper/${paperId}?fields=title,authors,year,venue,publicationVenue,externalIds,journal,publicationDate`
+      );
+
+      if (!response.ok) {
+        console.log('Semantic Scholar API returned non-OK status:', response.status);
+        return metadata;
+      }
+
+      const data = await response.json();
+
+      // Only fill in missing fields, don't overwrite existing data
+      if (!metadata.title && data.title) {
+        metadata.title = data.title;
+      }
+      
+      if (!metadata.author && data.authors && data.authors.length > 0) {
+        metadata.author = data.authors.map(a => a.name).join('; ');
+      }
+      
+      if (!metadata.date && data.publicationDate) {
+        metadata.date = data.publicationDate;
+      } else if (!metadata.date && data.year) {
+        metadata.date = data.year.toString();
+      }
+      
+      if (!metadata.year && data.year) {
+        metadata.year = data.year.toString();
+      }
+      
+      if (!metadata.publisher && data.venue) {
+        metadata.publisher = data.venue;
+      }
+      
+      if (!metadata.journal && data.journal?.name) {
+        metadata.journal = data.journal.name;
+      }
+      
+      if (!metadata.volume && data.journal?.volume) {
+        metadata.volume = data.journal.volume;
+      }
+      
+      if (!metadata.pages && data.journal?.pages) {
+        metadata.pages = data.journal.pages;
+      }
+      
+      if (!metadata.doi && data.externalIds?.DOI) {
+        metadata.doi = data.externalIds.DOI;
+      }
+
+      console.log('Metadata enhanced with Semantic Scholar data');
+    } catch (error) {
+      console.error('Error enhancing metadata with Semantic Scholar:', error);
+    }
+
+    return metadata;
+  }
+
+  /**
    * Fetch metadata from current tab
    */
   async function fetchMetadata() {
@@ -255,12 +615,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         function: extractPageMetadata
       });
 
+      let metadata = { url: tab.url };
       if (results && results[0] && results[0].result) {
-        const metadata = results[0].result;
-        populateFields(metadata);
+        metadata = results[0].result;
       }
       
+      // If metadata is incomplete, try to enhance with Semantic Scholar
+      if (isMetadataIncomplete(metadata)) {
+        // Show a brief loading indicator
+        previewPlaceholder.textContent = 'Fetching additional metadata...';
+        previewPlaceholder.style.display = 'block';
+        
+        metadata = await enhanceMetadataWithSemanticScholar(metadata);
+      }
+      
+      populateFields(metadata);
       updatePreview();
+      
+      // Check for peer-reviewed version if on arXiv
+      await checkForPeerReviewedVersion(tab.url);
     } catch (error) {
       console.error('Error fetching metadata:', error);
       try {
@@ -406,6 +779,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     savePreferences();
   });
 
+  // Peer-reviewed version switcher buttons
+  if (versionArxivBtn) {
+    versionArxivBtn.addEventListener('click', () => switchToVersion('arxiv'));
+  }
+  if (versionPublishedBtn) {
+    versionPublishedBtn.addEventListener('click', () => switchToVersion('published'));
+  }
+
   // Update preview on any field change
   Object.values(fields).forEach(field => {
     if (field) {
@@ -422,6 +803,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     Object.values(fields).forEach(field => {
       if (field) field.value = '';
     });
+    hideVersionSwitcher();
     await fetchMetadata();
   });
 
