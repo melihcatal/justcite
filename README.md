@@ -2,6 +2,23 @@
 
 A modern, minimalist browser extension for generating academic citations. Extract metadata from any webpage and create properly formatted citations in multiple styles.
 
+<!-- Table of Contents -->
+## Table of Contents
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Settings](#settings)
+  - [Citation Key Format](#citation-key-format)
+- [Supported Metadata Sources](#supported-metadata-sources)
+- [Project Structure](#project-structure)
+- [Development](#development)
+- [Citation Style Examples](#citation-style-examples)
+- [Contributing](#contributing)
+- [License](#license)
+- [Acknowledgments](#acknowledgments)
+
+<a id="features"></a>
 ## ✨ Features
 
 - **Automatic Metadata Extraction**: Automatically detects title, author, publication date, DOI, and more from web pages
@@ -21,6 +38,7 @@ A modern, minimalist browser extension for generating academic citations. Extrac
 - **Optional Access Date**: Toggle urldate inclusion for online sources
 - **Collapsible Details**: Hide/show source information fields for a cleaner view
 
+<a id="installation"></a>
 ## 🚀 Installation
 
 ### Chrome (Developer Mode)
@@ -35,6 +53,7 @@ A modern, minimalist browser extension for generating academic citations. Extrac
 
 Safari support is planned for a future release.
 
+<a id="usage"></a>
 ## 📖 Usage
 
 1. Navigate to any webpage you want to cite
@@ -45,10 +64,12 @@ Safari support is planned for a future release.
 6. Expand "Source Details" to edit any fields if needed
 7. Click "Copy" to copy to clipboard
 
+<a id="settings"></a>
 ## 🔧 Settings
 
 Click the ⚙️ settings icon to customize:
 
+<a id="citation-key-format"></a>
 ### Citation Key Format
 Configure how BibTeX citation keys are generated using these tokens:
 - `auth.lower` - First author's last name, lowercase
@@ -61,6 +82,7 @@ Configure how BibTeX citation keys are generated using these tokens:
 **Default format**: `auth.lower + shorttitle(3,3) + year`  
 **Example output**: `smith_mac_lea_2024`
 
+<a id="supported-metadata-sources"></a>
 ## 🎨 Supported Metadata Sources
 
 JustCite extracts metadata from:
@@ -71,6 +93,7 @@ JustCite extracts metadata from:
 - **JSON-LD structured data**
 - **Standard HTML elements** (`<title>`, `<time>`, etc.)
 
+<a id="project-structure"></a>
 ## 📁 Project Structure
 
 ```
@@ -87,6 +110,7 @@ justcite/
 └── README.md
 ```
 
+<a id="development"></a>
 ## 🔧 Development
 
 ### Prerequisites
@@ -109,6 +133,7 @@ The `citationFormatter.js` module handles all citation formatting logic. To add 
 2. Add the style option to the dropdown in `popup.html`
 3. Update the `format()` method switch statement
 
+<a id="citation-style-examples"></a>
 ## 📝 Citation Style Examples
 
 ### BibTeX
@@ -132,6 +157,7 @@ Smith, J. (2024). Machine learning fundamentals. Example. https://example.com/ar
 Smith, John. "Machine Learning Fundamentals." Example, 2024, https://example.com/article.
 ```
 
+<a id="contributing"></a>
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -142,8 +168,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-
-<h2 id="screenshots">🖼️ Screenshots</h2>
+<a id="screenshots"></a>
+<h2>🖼️ Screenshots</h2>
 <div class="screenshots">
   <img src="chrome/images/1.png" alt="JustCite - Popup" width="320" style="margin-right:12px;margin-bottom:12px;">
   <img src="chrome/images/2.png" alt="JustCite - Settings" width="320" style="margin-right:12px;margin-bottom:12px;">
@@ -152,11 +178,12 @@ Contributions are welcome! Please feel free to submit a Pull Request.
   <img src="chrome/images/4.png" alt="JustCite - Extraction" width="320" style="margin-right:12px;margin-bottom:12px;">
 </div>
 
-
+<a id="license"></a>
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+<a id="acknowledgments"></a>
 ## 🙏 Acknowledgments
 
 - Inspired by [Zotero](https://www.zotero.org/) and its web connector
