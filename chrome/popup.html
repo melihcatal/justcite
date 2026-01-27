@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JustCite</title>
+    <link rel="stylesheet" href="popup.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <span class="material-icons">format_quote</span>
+                <h1>JustCite</h1>
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn" id="settings-btn" data-tooltip="Settings">
+                    <span class="material-icons">settings</span>
+                </button>
+                <button class="icon-btn" id="about-btn" data-tooltip="About JustCite">
+                    <span class="material-icons">info</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content - Two Column Layout -->
+        <div class="main-content">
+            <!-- Left Column - Controls & Details -->
+            <div class="left-column">
+                <!-- Style Selectors Row -->
+                <div class="selectors-row">
+                    <div class="style-selector">
+                        <label for="citation-style">Style</label>
+                        <div class="select-wrapper">
+                            <select id="citation-style">
+                                <option value="bibtex">BibTeX</option>
+                                <option value="apa">APA 7th</option>
+                                <option value="mla">MLA 9th</option>
+                                <option value="chicago">Chicago</option>
+                                <option value="harvard">Harvard</option>
+                                <option value="ieee">IEEE</option>
+                            </select>
+                            <span class="material-icons">expand_more</span>
+                        </div>
+                    </div>
+
+                    <div class="style-selector">
+                        <label for="source-type">Type</label>
+                        <div class="select-wrapper">
+                            <select id="source-type">
+                                <option value="webpage">Webpage</option>
+                                <option value="article">Article</option>
+                                <option value="book">Book</option>
+                                <option value="journal">Journal</option>
+                                <option value="news">News</option>
+                            </select>
+                            <span class="material-icons">expand_more</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Collapsible Details Section -->
+                <div class="collapsible-section">
+                    <button class="collapsible-header" id="details-toggle">
+                        <div class="collapsible-title">
+                            <span class="material-icons"
+                                data-tooltip="Edit source metadata fields. These are automatically extracted from the webpage but can be modified manually.">edit_note</span>
+                            <span>Source Details</span>
+                        </div>
+                        <span class="material-icons toggle-icon">expand_more</span>
+                    </button>
+
+                    <div class="collapsible-content" id="details-content">
+                        <div class="form-group">
+                            <label for="title"
+                                data-tooltip="The main title of the work. Example: 'Machine Learning Fundamentals'">Title</label>
+                            <input type="text" id="title" placeholder="Enter title...">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="author"
+                                data-tooltip="Author name(s). Use semicolons to separate multiple authors. Example: 'Smith, John; Doe, Jane'">Author(s)</label>
+                            <input type="text" id="author" placeholder="Smith, John; Doe, Jane...">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="date"
+                                data-tooltip="Publication date in any format. Year will be extracted automatically. Example: '2024-03-15' or 'March 15, 2024'">Publication
+                                Date</label>
+                            <input type="text" id="date" placeholder="2024-03-15 or March 2024">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="url"
+                                data-tooltip="The full URL/web address of the source. Example: 'https://example.com/article'">URL</label>
+                            <input type="text" id="url" placeholder="https://...">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="publisher"
+                                data-tooltip="Publisher or website name. Example: 'Nature Publishing Group' or 'The New York Times'">Publisher
+                                / Website</label>
+                            <input type="text" id="publisher" placeholder="Publisher name...">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="doi"
+                                    data-tooltip="Digital Object Identifier. A unique alphanumeric string. Example: '10.1038/nature12373'">DOI</label>
+                                <input type="text" id="doi" placeholder="10.xxxx/xxxxx">
+                            </div>
+                            <div class="form-group">
+                                <label for="isbn"
+                                    data-tooltip="International Standard Book Number. Example: '978-3-16-148410-0'">ISBN</label>
+                                <input type="text" id="isbn" placeholder="978-...">
+                            </div>
+                        </div>
+
+                        <!-- Journal-specific fields -->
+                        <div class="form-row journal-fields">
+                            <div class="form-group">
+                                <label for="journal"
+                                    data-tooltip="Name of the journal. Example: 'Nature' or 'Science'">Journal</label>
+                                <input type="text" id="journal" placeholder="Journal name...">
+                            </div>
+                            <div class="form-group">
+                                <label for="volume"
+                                    data-tooltip="Volume number of the journal. Example: '42'">Volume</label>
+                                <input type="text" id="volume" placeholder="Vol.">
+                            </div>
+                        </div>
+
+                        <div class="form-row journal-fields">
+                            <div class="form-group">
+                                <label for="issue"
+                                    data-tooltip="Issue number within the volume. Example: '3'">Issue</label>
+                                <input type="text" id="issue" placeholder="Issue">
+                            </div>
+                            <div class="form-group">
+                                <label for="pages"
+                                    data-tooltip="Page range of the article. Example: '123-145'">Pages</label>
+                                <input type="text" id="pages" placeholder="1-10">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Options Section -->
+                <div class="options-section">
+                    <label class="checkbox-label"
+                        data-tooltip="Include the date when this citation was accessed. Required by some citation styles for online sources.">
+                        <input type="checkbox" id="include-access-date">
+                        <span class="checkmark"></span>
+                        <span>Include access date</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Right Column - Preview -->
+            <div class="right-column">
+                <div class="preview-section">
+                    <div class="preview-header">
+                        <div class="preview-title">
+                            <span class="material-icons">code</span>
+                            <span>Citation</span>
+                        </div>
+                        <div class="output-format">
+                            <select id="output-format" data-tooltip="Output format for copying">
+                                <option value="plain">Plain Text</option>
+                                <option value="markdown">Markdown</option>
+                                <option value="html">HTML</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="preview-box" id="citation-preview">
+                        <pre class="citation-code"><code id="citation-code"></code></pre>
+                        <span class="placeholder-text" id="preview-placeholder">Your citation will appear here...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="actions">
+            <button class="btn btn-secondary" id="refresh-btn" data-tooltip="Re-extract metadata from the current page">
+                <span class="material-icons">refresh</span>
+                Refresh
+            </button>
+            <button class="btn btn-primary" id="copy-btn" data-tooltip="Copy citation to clipboard">
+                <span class="material-icons">content_copy</span>
+                Copy
+            </button>
+        </div>
+
+        <!-- App footnote (visible on main page) Made with ❤️ for the research community -->
+        <div class="app-footnote">
+            <p>Made with ❤️ for the research community</p>
+        </div>
+
+        <!-- Toast Notification -->
+        <div class="toast" id="toast">
+            <span class="material-icons">check_circle</span>
+            <span class="toast-message">Citation copied to clipboard!</span>
+        </div>
+
+        <!-- About Modal -->
+        <div class="modal-overlay" id="about-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <div class="modal-title">
+                        <span class="material-icons">format_quote</span>
+                        <h2>JustCite</h2>
+                    </div>
+                    <button class="icon-btn modal-close" id="about-close">
+                        <span class="material-icons">close</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="about-version">Version 1.0.0</div>
+                    <p class="about-description">
+                        A modern citation generator for researchers, students, and professionals.
+                        Extract metadata from any webpage and create properly formatted citations.
+                    </p>
+                    <div class="about-features">
+                        <h3>Features</h3>
+                        <ul>
+                            <li>Automatic metadata extraction</li>
+                            <li>6 citation styles (BibTeX, APA, MLA, Chicago, Harvard, IEEE)</li>
+                            <li>Customizable citation keys</li>
+                            <li>Multiple output formats</li>
+                        </ul>
+                    </div>
+                    <div class="about-links">
+                        <a href="https://github.com/justcite" target="_blank" class="about-link">
+                            <span class="material-icons">code</span>
+                            GitHub
+                        </a>
+                        <a href="mailto:contact@justcite.app" class="about-link">
+                            <span class="material-icons">email</span>
+                            Contact
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div class="modal-overlay" id="settings-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <div class="modal-title">
+                        <span class="material-icons">settings</span>
+                        <h2>Settings</h2>
+                    </div>
+                    <button class="icon-btn modal-close" id="settings-close">
+                        <span class="material-icons">close</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="settings-section">
+                        <h3>Citation Key Format</h3>
+                        <p class="settings-description">Customize how BibTeX citation keys are generated.</p>
+                        <div class="form-group">
+                            <label for="key-format">Key Formula</label>
+                            <input type="text" id="key-format" value="auth.lower + shorttitle(3,3) + year">
+                        </div>
+                        <div class="key-tokens">
+                            <span class="token" data-token="auth.lower"
+                                data-tooltip="First author's last name, lowercase">auth.lower</span>
+                            <span class="token" data-token="Auth"
+                                data-tooltip="First author's last name, capitalized">Auth</span>
+                            <span class="token" data-token="year" data-tooltip="Publication year (4 digits)">year</span>
+                            <span class="token" data-token="shortyear"
+                                data-tooltip="Publication year (2 digits)">shortyear</span>
+                            <span class="token" data-token="title.lower"
+                                data-tooltip="First word of title, lowercase">title.lower</span>
+                            <span class="token" data-token="shorttitle(3,3)"
+                                data-tooltip="First 3 words, max 3 chars each">shorttitle(3,3)</span>
+                        </div>
+                        <div class="key-preview">
+                            <label>Preview:</label>
+                            <code id="key-preview-text">smith_mac_2024</code>
+                        </div>
+                    </div>
+                    <div class="settings-actions">
+                        <button class="btn btn-secondary" id="reset-settings">Reset Default</button>
+                        <button class="btn btn-primary" id="save-settings">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="citationFormatter.js"></script>
+    <script src="popup.js"></script>
+</body>
+
+</html>
