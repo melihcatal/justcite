@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const versionArxivBtn = document.getElementById('version-arxiv-btn');
   const versionPublishedBtn = document.getElementById('version-published-btn');
   const versionInfo = document.getElementById('version-info');
+  const peerReviewStatus = document.getElementById('peer-review-status');
   
   // Modal elements
   const aboutBtn = document.getElementById('about-btn');
@@ -89,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
    * Show/hide journal-specific fields based on source type
    */
   function updateFieldVisibility() {
-    const sourceType = sourceTypeSelect.value;
+    const sourceType = sourceTypeSelect ? sourceTypeSelect.value : 'webpage';
     const showJournalFields = ['article', 'journal'].includes(sourceType);
     
     journalFields.forEach(el => {
@@ -101,24 +102,24 @@ document.addEventListener('DOMContentLoaded', async () => {
    * Get metadata from form fields
    */
   function getMetadata() {
-    const dateValue = fields.date.value.trim();
+    const dateValue = fields.date ? fields.date.value.trim() : '';
     const yearMatch = dateValue.match(/(\d{4})/);
     
     return {
-      title: fields.title.value.trim(),
-      author: fields.author.value.trim(),
+      title: fields.title ? fields.title.value.trim() : '',
+      author: fields.author ? fields.author.value.trim() : '',
       date: dateValue,
       year: yearMatch ? yearMatch[1] : '',
-      url: fields.url.value.trim(),
-      publisher: fields.publisher.value.trim(),
-      doi: fields.doi.value.trim(),
-      isbn: fields.isbn.value.trim(),
-      journal: fields.journal.value.trim(),
-      volume: fields.volume.value.trim(),
-      issue: fields.issue.value.trim(),
-      pages: fields.pages.value.trim(),
-      sourceType: sourceTypeSelect.value,
-      includeAccessDate: includeAccessDate.checked,
+      url: fields.url ? fields.url.value.trim() : '',
+      publisher: fields.publisher ? fields.publisher.value.trim() : '',
+      doi: fields.doi ? fields.doi.value.trim() : '',
+      isbn: fields.isbn ? fields.isbn.value.trim() : '',
+      journal: fields.journal ? fields.journal.value.trim() : '',
+      volume: fields.volume ? fields.volume.value.trim() : '',
+      issue: fields.issue ? fields.issue.value.trim() : '',
+      pages: fields.pages ? fields.pages.value.trim() : '',
+      sourceType: sourceTypeSelect ? sourceTypeSelect.value : 'webpage',
+      includeAccessDate: includeAccessDate ? includeAccessDate.checked : true,
       keyFormat: currentKeyFormat
     };
   }
@@ -155,27 +156,62 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
+   * Update peer-review search status
+   */
+  function updatePeerReviewStatus(status, message = '') {
+    if (!peerReviewStatus) return;
+    
+    peerReviewStatus.className = 'peer-review-status';
+    
+    if (status === 'loading') {
+      peerReviewStatus.innerHTML = '<span class="spinner"></span><span>Checking for published version...</span>';
+      peerReviewStatus.classList.add('show', 'loading');
+    } else if (status === 'found') {
+      peerReviewStatus.innerHTML = '<span class="material-icons">verified</span><span>Published version found</span>';
+      peerReviewStatus.classList.add('show', 'success');
+      // Auto-hide after 3 seconds since the version switcher shows
+      setTimeout(() => {
+        peerReviewStatus.classList.remove('show');
+      }, 3000);
+    } else if (status === 'not-found') {
+      peerReviewStatus.innerHTML = '<span class="material-icons">article</span><span>No published version</span>';
+      peerReviewStatus.classList.add('show', 'not-found');
+      // Auto-hide after 3 seconds
+      setTimeout(() => {
+        peerReviewStatus.classList.remove('show');
+      }, 3000);
+    } else {
+      peerReviewStatus.classList.remove('show');
+      peerReviewStatus.innerHTML = '';
+    }
+  }
+
+  /**
    * Check for peer-reviewed version using Semantic Scholar API
    */
   async function checkForPeerReviewedVersion(url) {
     const arxivId = extractArxivId(url);
     if (!arxivId) {
       hideVersionSwitcher();
+      updatePeerReviewStatus('hide');
       return null;
     }
 
+    // Show loading status
+    updatePeerReviewStatus('loading');
+
     // Store the current arXiv version before checking
     arxivVersion = {
-      title: fields.title.value,
-      author: fields.author.value,
-      date: fields.date.value,
-      url: fields.url.value,
-      publisher: fields.publisher.value,
-      doi: fields.doi.value,
-      journal: fields.journal.value,
-      volume: fields.volume.value,
-      issue: fields.issue.value,
-      pages: fields.pages.value,
+      title: fields.title ? fields.title.value : '',
+      author: fields.author ? fields.author.value : '',
+      date: fields.date ? fields.date.value : '',
+      url: fields.url ? fields.url.value : '',
+      publisher: fields.publisher ? fields.publisher.value : '',
+      doi: fields.doi ? fields.doi.value : '',
+      journal: fields.journal ? fields.journal.value : '',
+      volume: fields.volume ? fields.volume.value : '',
+      issue: fields.issue ? fields.issue.value : '',
+      pages: fields.pages ? fields.pages.value : '',
       arxivId: arxivId
     };
 
@@ -187,6 +223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (!response.ok) {
         console.log('Semantic Scholar API returned non-OK status:', response.status);
+        updatePeerReviewStatus('not-found');
         return null;
       }
 
@@ -244,11 +281,16 @@ document.addEventListener('DOMContentLoaded', async () => {
           isConference: isConference
         };
 
+        updatePeerReviewStatus('found');
         showVersionSwitcher();
         return peerReviewedVersion;
       }
+      
+      // No published version found
+      updatePeerReviewStatus('not-found');
     } catch (error) {
       console.error('Error checking for peer-reviewed version:', error);
+      updatePeerReviewStatus('not-found');
     }
 
     hideVersionSwitcher();
@@ -331,34 +373,34 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (version === 'arxiv' && arxivVersion) {
       // Apply arXiv version
-      fields.title.value = arxivVersion.title || '';
-      fields.author.value = arxivVersion.author || '';
-      fields.date.value = arxivVersion.date || '';
-      fields.url.value = arxivVersion.url || '';
-      fields.publisher.value = arxivVersion.publisher || '';
-      fields.doi.value = arxivVersion.doi || '';
-      fields.journal.value = arxivVersion.journal || '';
-      fields.volume.value = arxivVersion.volume || '';
-      fields.issue.value = arxivVersion.issue || '';
-      fields.pages.value = arxivVersion.pages || '';
+      if (fields.title) fields.title.value = arxivVersion.title || '';
+      if (fields.author) fields.author.value = arxivVersion.author || '';
+      if (fields.date) fields.date.value = arxivVersion.date || '';
+      if (fields.url) fields.url.value = arxivVersion.url || '';
+      if (fields.publisher) fields.publisher.value = arxivVersion.publisher || '';
+      if (fields.doi) fields.doi.value = arxivVersion.doi || '';
+      if (fields.journal) fields.journal.value = arxivVersion.journal || '';
+      if (fields.volume) fields.volume.value = arxivVersion.volume || '';
+      if (fields.issue) fields.issue.value = arxivVersion.issue || '';
+      if (fields.pages) fields.pages.value = arxivVersion.pages || '';
       
       // Reset source type for preprint
-      sourceTypeSelect.value = 'article';
+      if (sourceTypeSelect) sourceTypeSelect.value = 'article';
     } else if (version === 'published' && peerReviewedVersion) {
       // Apply peer-reviewed version
-      fields.title.value = peerReviewedVersion.title || '';
-      fields.author.value = peerReviewedVersion.author || '';
-      fields.date.value = peerReviewedVersion.date || '';
-      fields.url.value = peerReviewedVersion.url || '';
-      fields.publisher.value = peerReviewedVersion.publisher || '';
-      fields.doi.value = peerReviewedVersion.doi || '';
-      fields.journal.value = peerReviewedVersion.journal || '';
-      fields.volume.value = peerReviewedVersion.volume || '';
-      fields.issue.value = peerReviewedVersion.issue || '';
-      fields.pages.value = peerReviewedVersion.pages || '';
+      if (fields.title) fields.title.value = peerReviewedVersion.title || '';
+      if (fields.author) fields.author.value = peerReviewedVersion.author || '';
+      if (fields.date) fields.date.value = peerReviewedVersion.date || '';
+      if (fields.url) fields.url.value = peerReviewedVersion.url || '';
+      if (fields.publisher) fields.publisher.value = peerReviewedVersion.publisher || '';
+      if (fields.doi) fields.doi.value = peerReviewedVersion.doi || '';
+      if (fields.journal) fields.journal.value = peerReviewedVersion.journal || '';
+      if (fields.volume) fields.volume.value = peerReviewedVersion.volume || '';
+      if (fields.issue) fields.issue.value = peerReviewedVersion.issue || '';
+      if (fields.pages) fields.pages.value = peerReviewedVersion.pages || '';
       
       // Set source type based on publication type
-      sourceTypeSelect.value = peerReviewedVersion.isConference ? 'article' : 'journal';
+      if (sourceTypeSelect) sourceTypeSelect.value = peerReviewedVersion.isConference ? 'article' : 'journal';
     }
 
     updateFieldVisibility();
@@ -398,23 +440,25 @@ document.addEventListener('DOMContentLoaded', async () => {
    */
   function updatePreview() {
     const metadata = getMetadata();
-    const style = citationStyleSelect.value;
+    const style = citationStyleSelect ? citationStyleSelect.value : 'apa';
     
     if (!metadata.title && !metadata.author && !metadata.url) {
-      citationCode.innerHTML = '';
-      previewPlaceholder.style.display = 'block';
+      if (citationCode) citationCode.innerHTML = '';
+      if (previewPlaceholder) previewPlaceholder.style.display = 'block';
       return;
     }
     
     try {
       const citation = CitationFormatter.format(metadata, style);
-      citationCode.innerHTML = formatCitationDisplay(citation, style);
-      previewPlaceholder.style.display = 'none';
+      if (citationCode) citationCode.innerHTML = formatCitationDisplay(citation, style);
+      if (previewPlaceholder) previewPlaceholder.style.display = 'none';
     } catch (error) {
       console.error('Error generating citation:', error);
-      citationCode.innerHTML = '';
-      previewPlaceholder.textContent = 'Error generating citation';
-      previewPlaceholder.style.display = 'block';
+      if (citationCode) citationCode.innerHTML = '';
+      if (previewPlaceholder) {
+        previewPlaceholder.textContent = 'Error generating citation';
+        previewPlaceholder.style.display = 'block';
+      }
     }
   }
 
@@ -423,8 +467,8 @@ document.addEventListener('DOMContentLoaded', async () => {
    */
   function getFormattedCitation() {
     const metadata = getMetadata();
-    const style = citationStyleSelect.value;
-    const outputFormat = outputFormatSelect.value;
+    const style = citationStyleSelect ? citationStyleSelect.value : 'apa';
+    const outputFormat = outputFormatSelect ? outputFormatSelect.value : 'plain';
     
     let citation = CitationFormatter.format(metadata, style);
     
@@ -472,11 +516,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     try {
-      await navigator.clipboard.writeText(citation);
-      showToast('Citation copied to clipboard!');
+      // Try using the modern clipboard API first
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(citation);
+        showToast('Citation copied to clipboard!');
+      } else {
+        // Fallback for older browsers or restricted contexts
+        fallbackCopyToClipboard(citation);
+      }
     } catch (error) {
       console.error('Error copying to clipboard:', error);
-      showToast('Failed to copy citation', true);
+      // Try fallback method
+      try {
+        fallbackCopyToClipboard(citation);
+      } catch (fallbackError) {
+        console.error('Fallback copy also failed:', fallbackError);
+        showToast('Failed to copy citation', true);
+      }
+    }
+  }
+
+  /**
+   * Fallback method to copy text to clipboard using execCommand
+   */
+  function fallbackCopyToClipboard(text) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    
+    // Avoid scrolling to bottom
+    textArea.style.top = '0';
+    textArea.style.left = '0';
+    textArea.style.position = 'fixed';
+    textArea.style.opacity = '0';
+    
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+      const successful = document.execCommand('copy');
+      if (successful) {
+        showToast('Citation copied to clipboard!');
+      } else {
+        showToast('Failed to copy citation', true);
+      }
+    } finally {
+      document.body.removeChild(textArea);
     }
   }
 
@@ -608,7 +693,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function metadataToZoteroItem(metadata) {
     // Determine item type based on source type
     let itemType = 'webpage';
-    const sourceType = sourceTypeSelect.value;
+    const sourceType = sourceTypeSelect ? sourceTypeSelect.value : 'webpage';
     
     switch (sourceType) {
       case 'article':
@@ -1058,7 +1143,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       // Set URL immediately
-      fields.url.value = tab.url || '';
+      if (fields.url) fields.url.value = tab.url || '';
 
       // Execute content script to extract metadata
       const results = await chrome.scripting.executeScript({
@@ -1074,8 +1159,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       // If metadata is incomplete, try to enhance with Semantic Scholar
       if (isMetadataIncomplete(metadata)) {
         // Show a brief loading indicator
-        previewPlaceholder.textContent = 'Fetching additional metadata...';
-        previewPlaceholder.style.display = 'block';
+        if (previewPlaceholder) {
+          previewPlaceholder.textContent = 'Fetching additional metadata...';
+          previewPlaceholder.style.display = 'block';
+        }
         
         metadata = await enhanceMetadataWithSemanticScholar(metadata);
       }
@@ -1090,8 +1177,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (tab) {
-          fields.url.value = tab.url || '';
-          fields.title.value = tab.title || '';
+          if (fields.url) fields.url.value = tab.url || '';
+          if (fields.title) fields.title.value = tab.title || '';
         }
       } catch (e) {
         console.error('Error getting tab info:', e);
@@ -1104,23 +1191,25 @@ document.addEventListener('DOMContentLoaded', async () => {
    * Populate form fields with metadata
    */
   function populateFields(metadata) {
-    if (metadata.title) fields.title.value = metadata.title;
-    if (metadata.author) fields.author.value = metadata.author;
-    if (metadata.date) fields.date.value = metadata.date;
-    if (metadata.url) fields.url.value = metadata.url;
-    if (metadata.publisher) fields.publisher.value = metadata.publisher;
-    if (metadata.doi) fields.doi.value = metadata.doi;
-    if (metadata.isbn) fields.isbn.value = metadata.isbn;
-    if (metadata.journal) fields.journal.value = metadata.journal;
-    if (metadata.volume) fields.volume.value = metadata.volume;
-    if (metadata.issue) fields.issue.value = metadata.issue;
-    if (metadata.pages) fields.pages.value = metadata.pages;
+    if (metadata.title && fields.title) fields.title.value = metadata.title;
+    if (metadata.author && fields.author) fields.author.value = metadata.author;
+    if (metadata.date && fields.date) fields.date.value = metadata.date;
+    if (metadata.url && fields.url) fields.url.value = metadata.url;
+    if (metadata.publisher && fields.publisher) fields.publisher.value = metadata.publisher;
+    if (metadata.doi && fields.doi) fields.doi.value = metadata.doi;
+    if (metadata.isbn && fields.isbn) fields.isbn.value = metadata.isbn;
+    if (metadata.journal && fields.journal) fields.journal.value = metadata.journal;
+    if (metadata.volume && fields.volume) fields.volume.value = metadata.volume;
+    if (metadata.issue && fields.issue) fields.issue.value = metadata.issue;
+    if (metadata.pages && fields.pages) fields.pages.value = metadata.pages;
     
     // Auto-detect source type
-    if (metadata.journal || metadata.doi) {
-      sourceTypeSelect.value = 'journal';
-    } else if (metadata.isbn) {
-      sourceTypeSelect.value = 'book';
+    if (sourceTypeSelect) {
+      if (metadata.journal || metadata.doi) {
+        sourceTypeSelect.value = 'journal';
+      } else if (metadata.isbn) {
+        sourceTypeSelect.value = 'book';
+      }
     }
     
     updateFieldVisibility();
@@ -1157,14 +1246,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         'zoteroUserId'
       ]);
       
-      if (result.citationStyle) citationStyleSelect.value = result.citationStyle;
-      if (result.sourceType) sourceTypeSelect.value = result.sourceType;
-      if (result.outputFormat) outputFormatSelect.value = result.outputFormat;
-      if (result.includeAccessDate !== undefined) includeAccessDate.checked = result.includeAccessDate;
-      if (result.keyFormat) {
+      if (result.citationStyle && citationStyleSelect) citationStyleSelect.value = result.citationStyle;
+      if (result.sourceType && sourceTypeSelect) sourceTypeSelect.value = result.sourceType;
+      if (result.outputFormat && outputFormatSelect) outputFormatSelect.value = result.outputFormat;
+      if (result.includeAccessDate !== undefined && includeAccessDate) includeAccessDate.checked = result.includeAccessDate;
+      if (result.keyFormat && keyFormatInput) {
         currentKeyFormat = result.keyFormat;
         keyFormatInput.value = result.keyFormat;
-      } else {
+      } else if (keyFormatInput) {
         keyFormatInput.value = DEFAULT_KEY_FORMAT;
       }
       if (result.detailsExpanded) toggleDetails(true);
@@ -1190,12 +1279,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function savePreferences() {
     try {
       await chrome.storage.local.set({
-        citationStyle: citationStyleSelect.value,
-        sourceType: sourceTypeSelect.value,
-        outputFormat: outputFormatSelect.value,
-        includeAccessDate: includeAccessDate.checked,
+        citationStyle: citationStyleSelect ? citationStyleSelect.value : 'apa',
+        sourceType: sourceTypeSelect ? sourceTypeSelect.value : 'webpage',
+        outputFormat: outputFormatSelect ? outputFormatSelect.value : 'plain',
+        includeAccessDate: includeAccessDate ? includeAccessDate.checked : true,
         keyFormat: currentKeyFormat,
-        detailsExpanded: detailsSection.classList.contains('expanded')
+        detailsExpanded: detailsSection ? detailsSection.classList.contains('expanded') : false
       });
     } catch (error) {
       console.error('Error saving preferences:', error);
@@ -1361,12 +1450,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Save all settings including Zotero credentials
     try {
       await chrome.storage.local.set({
-        citationStyle: citationStyleSelect.value,
-        sourceType: sourceTypeSelect.value,
-        outputFormat: outputFormatSelect.value,
-        includeAccessDate: includeAccessDate.checked,
+        citationStyle: citationStyleSelect ? citationStyleSelect.value : 'apa',
+        sourceType: sourceTypeSelect ? sourceTypeSelect.value : 'webpage',
+        outputFormat: outputFormatSelect ? outputFormatSelect.value : 'plain',
+        includeAccessDate: includeAccessDate ? includeAccessDate.checked : true,
         keyFormat: currentKeyFormat,
-        detailsExpanded: detailsSection.classList.contains('expanded'),
+        detailsExpanded: detailsSection ? detailsSection.classList.contains('expanded') : false,
         zoteroApiKey: zoteroApiKey,
         zoteroUserId: zoteroUserId
       });
