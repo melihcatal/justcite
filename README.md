@@ -7,9 +7,13 @@ A modern, minimalist browser extension for generating academic citations. Extrac
 - [Features](#features)
 - [Screenshots](#screenshots)
 - [Installation](#installation)
+  - [Chrome](#chrome)
+  - [Brave](#brave)
+  - [Safari](#safari)
 - [Usage](#usage)
 - [Settings](#settings)
   - [Citation Key Format](#citation-key-format)
+  - [Zotero Integration](#zotero-integration)
 - [Supported Metadata Sources](#supported-metadata-sources)
 - [Project Structure](#project-structure)
 - [Development](#development)
@@ -22,6 +26,9 @@ A modern, minimalist browser extension for generating academic citations. Extrac
 ## ✨ Features
 
 - **Automatic Metadata Extraction**: Automatically detects title, author, publication date, DOI, and more from web pages
+- **Smart Metadata Enhancement**: Uses Semantic Scholar API to fill in missing metadata for academic papers
+- **arXiv to Published Version Detection**: Automatically detects when an arXiv preprint has a peer-reviewed published version and lets you switch between citing the preprint or the published paper
+- **Zotero Integration**: Save citations directly to your Zotero library with folder/collection selection
 - **Multiple Citation Styles**:
   - BibTeX
   - APA 7th Edition
@@ -41,17 +48,59 @@ A modern, minimalist browser extension for generating academic citations. Extrac
 <a id="installation"></a>
 ## 🚀 Installation
 
-### Chrome (Developer Mode)
+<a id="chrome"></a>
+### Chrome
 
-1. Clone or download this repository
-2. Open Chrome and navigate to `chrome://extensions/`
-3. Enable "Developer mode" in the top right corner
-4. Click "Load unpacked"
-5. Select the `chrome` folder from this repository
+1. **Download** the repository:
+   - Click the green "Code" button on GitHub and select "Download ZIP"
+   - Or clone the repository: `git clone https://github.com/melihcatal/justcite.git`
 
-### Safari (Coming Soon)
+2. **Extract** the ZIP file if downloaded
 
-Safari support is planned for a future release.
+3. **Open Chrome Extensions**:
+   - Navigate to `chrome://extensions/` in your address bar
+   - Or go to Menu (⋮) → Extensions → Manage Extensions
+
+4. **Enable Developer Mode**:
+   - Toggle "Developer mode" switch in the top right corner
+
+5. **Load the Extension**:
+   - Click "Load unpacked"
+   - Navigate to and select the `chrome` folder from the extracted files
+
+6. **Pin the Extension** (optional):
+   - Click the puzzle piece icon in Chrome's toolbar
+   - Click the pin icon next to JustCite for easy access
+
+<a id="brave"></a>
+### Brave
+
+Brave uses the same extension format as Chrome:
+
+1. **Download** the repository (same as Chrome steps above)
+
+2. **Open Brave Extensions**:
+   - Navigate to `brave://extensions/` in your address bar
+   - Or go to Menu (☰) → Extensions → Manage Extensions
+
+3. **Enable Developer Mode**:
+   - Toggle "Developer mode" switch in the top right corner
+
+4. **Load the Extension**:
+   - Click "Load unpacked"
+   - Select the `chrome` folder from the extracted files
+
+5. **Pin the Extension** (optional):
+   - Click the puzzle piece icon in Brave's toolbar
+   - Click the pin icon next to JustCite
+
+<a id="safari"></a>
+### Safari (macOS & iOS)
+TBD - Coming Soon!
+
+
+
+
 
 <a id="usage"></a>
 ## 📖 Usage
@@ -63,6 +112,19 @@ Safari support is planned for a future release.
 5. Choose the source type (Webpage, Article, Book, etc.)
 6. Expand "Source Details" to edit any fields if needed
 7. Click "Copy" to copy to clipboard
+
+### arXiv Published Version Detection
+
+When viewing an arXiv preprint, JustCite automatically checks if a peer-reviewed version exists:
+
+1. A loading indicator shows "Checking for published version..."
+2. If found, a **version switcher** appears with two options:
+   - **arXiv**: Cite the preprint version
+   - **Published**: Cite the peer-reviewed publication with proper journal/conference info
+3. Click to toggle between versions - all metadata fields update automatically
+4. The published version includes DOI, journal name, volume, pages, and publication venue
+
+This helps ensure you're citing the most appropriate version of a paper!
 
 <a id="settings"></a>
 ## 🔧 Settings
@@ -82,6 +144,33 @@ Configure how BibTeX citation keys are generated using these tokens:
 **Default format**: `auth.lower + shorttitle(3,3) + year`  
 **Example output**: `smith_mac_lea_2024`
 
+<a id="zotero-integration"></a>
+### Zotero Integration
+
+JustCite can save citations directly to your Zotero library:
+
+1. **Get your Zotero API Key**:
+   - Go to [zotero.org/settings/keys](https://www.zotero.org/settings/keys)
+   - Click "Create new private key"
+   - Give it a name (e.g., "JustCite")
+   - Enable "Allow library access" and "Allow write access"
+   - Copy the generated key
+
+2. **Get your User ID**:
+   - Your numeric User ID is shown at the top of the [keys page](https://www.zotero.org/settings/keys)
+
+3. **Configure in JustCite**:
+   - Open JustCite settings (⚙️ icon)
+   - Scroll to "Zotero Integration"
+   - Paste your API Key and User ID
+   - Click "Test Connection" to verify
+
+4. **Save to Zotero**:
+   - Click the "Zotero" button in the main view
+   - Select a collection/folder (optional)
+   - Click "Save to Zotero"
+   - Sync your Zotero desktop client to see the new item
+
 <a id="supported-metadata-sources"></a>
 ## 🎨 Supported Metadata Sources
 
@@ -99,14 +188,21 @@ JustCite extracts metadata from:
 ```
 justcite/
 ├── chrome/
-│   ├── manifest.json        # Extension manifest
+│   ├── manifest.json        # Extension manifest (Manifest V3)
 │   ├── popup.html           # Extension popup UI
 │   ├── popup.css            # Styles (Material Design)
-│   ├── popup.js             # Popup logic
+│   ├── popup.js             # Popup logic & Zotero integration
 │   ├── contentScript.js     # Page metadata extraction
 │   ├── citationFormatter.js # Citation formatting engine
 │   └── icons/               # Extension icons
-├── safari/                  # Safari extension (coming soon)
+├── safari/
+│   ├── JustCite.xcodeproj/  # Xcode project file
+│   ├── Shared (App)/        # Shared app resources
+│   ├── Shared (Extension)/  # Safari extension handler
+│   ├── macOS (App)/         # macOS-specific app files
+│   ├── macOS (Extension)/   # macOS extension config
+│   ├── iOS (App)/           # iOS-specific app files
+│   └── iOS (Extension)/     # iOS extension config
 └── README.md
 ```
 
