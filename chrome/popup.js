@@ -120,7 +120,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       pages: fields.pages ? fields.pages.value.trim() : '',
       sourceType: sourceTypeSelect ? sourceTypeSelect.value : 'webpage',
       includeAccessDate: includeAccessDate ? includeAccessDate.checked : true,
-      keyFormat: currentKeyFormat
+      keyFormat: currentKeyFormat,
+      isConference: isConferencePaper
     };
   }
 
@@ -128,6 +129,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let peerReviewedVersion = null;
   let arxivVersion = null;
   let currentVersion = 'arxiv'; // 'arxiv' or 'published'
+  let isConferencePaper = false; // Track if the current version is a conference paper
 
   /**
    * Extract arXiv ID from URL
@@ -384,8 +386,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (fields.issue) fields.issue.value = arxivVersion.issue || '';
       if (fields.pages) fields.pages.value = arxivVersion.pages || '';
       
-      // Reset source type for preprint
+      // Reset source type and conference flag for preprint
       if (sourceTypeSelect) sourceTypeSelect.value = 'article';
+      isConferencePaper = false;
     } else if (version === 'published' && peerReviewedVersion) {
       // Apply peer-reviewed version
       if (fields.title) fields.title.value = peerReviewedVersion.title || '';
@@ -399,8 +402,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (fields.issue) fields.issue.value = peerReviewedVersion.issue || '';
       if (fields.pages) fields.pages.value = peerReviewedVersion.pages || '';
       
-      // Set source type based on publication type
+      // Set source type and conference flag based on publication type
       if (sourceTypeSelect) sourceTypeSelect.value = peerReviewedVersion.isConference ? 'article' : 'journal';
+      isConferencePaper = peerReviewedVersion.isConference || false;
     }
 
     updateFieldVisibility();

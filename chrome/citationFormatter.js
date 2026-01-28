@@ -234,7 +234,14 @@ const CitationFormatter = {
     if (metadata.year) fields.push(`  year = {${metadata.year}}`);
     if (metadata.url) fields.push(`  url = {${metadata.url}}`);
     if (metadata.publisher) fields.push(`  publisher = {${metadata.publisher}}`);
-    if (metadata.journal) fields.push(`  journal = {${metadata.journal}}`);
+    // Use booktitle for conference papers (inproceedings), journal for articles
+    if (metadata.journal) {
+      if (type === 'inproceedings') {
+        fields.push(`  booktitle = {${metadata.journal}}`);
+      } else {
+        fields.push(`  journal = {${metadata.journal}}`);
+      }
+    }
     if (metadata.volume) fields.push(`  volume = {${metadata.volume}}`);
     if (metadata.issue) fields.push(`  number = {${metadata.issue}}`);
     if (metadata.pages) fields.push(`  pages = {${metadata.pages}}`);
@@ -251,6 +258,11 @@ const CitationFormatter = {
   },
 
   getBibTeXType(sourceType, metadata = {}) {
+    // For conference papers, use inproceedings
+    if (metadata.isConference) {
+      return 'inproceedings';
+    }
+    
     // For articles/journals without journal info, use misc (like arXiv preprints)
     if ((sourceType === 'article' || sourceType === 'journal') && !metadata.journal) {
       return 'misc';
