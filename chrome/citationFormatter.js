@@ -221,11 +221,15 @@ const CitationFormatter = {
   toBibTeX(metadata) {
     const keyFormat = metadata.keyFormat || 'auth.lower + shorttitle(3,3) + year';
     const key = this.generateKeyFromFormat(metadata, keyFormat);
-    const type = this.getBibTeXType(metadata.sourceType);
+    const type = this.getBibTeXType(metadata.sourceType, metadata);
     
     let fields = [];
     
-    if (metadata.author) fields.push(`  author = {${metadata.author}}`);
+    // Format authors properly for BibTeX (separated by " and ")
+    if (metadata.author) {
+      const formattedAuthors = this.formatAuthors(metadata.author, 'bibtex');
+      fields.push(`  author = {${formattedAuthors}}`);
+    }
     if (metadata.title) fields.push(`  title = {${metadata.title}}`);
     if (metadata.year) fields.push(`  year = {${metadata.year}}`);
     if (metadata.url) fields.push(`  url = {${metadata.url}}`);
@@ -246,7 +250,12 @@ const CitationFormatter = {
     return `@${type}{${key},\n${fields.join(',\n')}\n}`;
   },
 
-  getBibTeXType(sourceType) {
+  getBibTeXType(sourceType, metadata = {}) {
+    // For articles/journals without journal info, use misc (like arXiv preprints)
+    if ((sourceType === 'article' || sourceType === 'journal') && !metadata.journal) {
+      return 'misc';
+    }
+    
     const typeMap = {
       'webpage': 'online',
       'article': 'article',
