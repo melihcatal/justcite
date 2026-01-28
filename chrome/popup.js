@@ -121,7 +121,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       sourceType: sourceTypeSelect ? sourceTypeSelect.value : 'webpage',
       includeAccessDate: includeAccessDate ? includeAccessDate.checked : true,
       keyFormat: currentKeyFormat,
-      isConference: isConferencePaper
+      isConference: isConferencePaper,
+      semanticScholarBibtex: semanticScholarBibtex
     };
   }
 
@@ -130,6 +131,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let arxivVersion = null;
   let currentVersion = 'arxiv'; // 'arxiv' or 'published'
   let isConferencePaper = false; // Track if the current version is a conference paper
+  let semanticScholarBibtex = null; // Store BibTeX from Semantic Scholar API
 
   /**
    * Extract arXiv ID from URL
@@ -220,7 +222,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       // Query Semantic Scholar API with arXiv ID
       const response = await fetch(
-        `https://api.semanticscholar.org/graph/v1/paper/arXiv:${arxivId}?fields=title,authors,year,venue,publicationVenue,externalIds,journal,publicationDate`
+        `https://api.semanticscholar.org/graph/v1/paper/arXiv:${arxivId}?fields=title,authors,year,venue,publicationVenue,externalIds,journal,publicationDate,citationStyles`
       );
 
       if (!response.ok) {
@@ -280,7 +282,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           doi: data.externalIds?.DOI || '',
           url: data.externalIds?.DOI ? `https://doi.org/${data.externalIds.DOI}` : '',
           arxivId: arxivId,
-          isConference: isConference
+          isConference: isConference,
+          bibtex: data.citationStyles?.bibtex || null
         };
 
         updatePeerReviewStatus('found');
