@@ -180,10 +180,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else if (status === 'not-found') {
       peerReviewStatus.innerHTML = '<span class="material-icons">article</span><span>No published version</span>';
       peerReviewStatus.classList.add('show', 'not-found');
-      // Auto-hide after 3 seconds
-      setTimeout(() => {
-        peerReviewStatus.classList.remove('show');
-      }, 3000);
+
+    } else if (status === 'error') {
+      peerReviewStatus.innerHTML = '<span class="material-icons">refresh</span><span>Couldn\'t check the published version, try again</span>';
+      peerReviewStatus.classList.add('show', 'error');
     } else {
       peerReviewStatus.classList.remove('show');
       peerReviewStatus.innerHTML = '';
@@ -227,7 +227,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (!response.ok) {
         console.log('Semantic Scholar API returned non-OK status:', response.status);
-        updatePeerReviewStatus('not-found');
+        // Use 'error' for rate limits (429) and server errors (5xx), 'not-found' for 404
+        if (response.status === 404) {
+          updatePeerReviewStatus('not-found');
+        } else {
+          updatePeerReviewStatus('error');
+        }
         return null;
       }
 
@@ -295,7 +300,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       updatePeerReviewStatus('not-found');
     } catch (error) {
       console.error('Error checking for peer-reviewed version:', error);
-      updatePeerReviewStatus('not-found');
+      // Network error or other failure - show retry message
+      updatePeerReviewStatus('error');
     }
 
     hideVersionSwitcher();
@@ -1342,6 +1348,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   if (versionPublishedBtn) {
     versionPublishedBtn.addEventListener('click', () => switchToVersion('published'));
+  }
+  
+  // Peer-review status click handler for retry on error
+  if (peerReviewStatus) {
+    peerReviewStatus.addEventListener('click', async () => {
+      // Only handle click when in error state
+      if (peerReviewStatus.classList.contains('error')) {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab && tab.url) {
+          await checkForPeerReviewedVersion(tab.url);
+        }
+      }
+    });
   }
 
   // Update preview on any field change
